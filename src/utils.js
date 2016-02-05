@@ -11,7 +11,8 @@ var _lgPriceCap = 5.00;
 var _mgPriceCap = 20.00;
 var _hgPriceCap = 20.00;
 
-var t_Arr = 'Array',
+var t_Obj = 'Object',
+	t_Arr = 'Array',
     t_Str = 'String',
     t_Fn = 'Function',
     toString = Object.prototype.toString,
@@ -100,7 +101,7 @@ exports.extend = function(target, source){
 	target = target || {};
 
 	this._each(source,function(value,prop){    
-		if (typeof source[prop] === objectType_object) {
+		if (this.isA(source[prop], t_Obj)) {
 			target[prop] = this.extend(target[prop], source[prop]);
 		} else {
 			target[prop] = source[prop];
