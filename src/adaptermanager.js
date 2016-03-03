@@ -4,6 +4,7 @@ var RubiconAdapter = require('./adapters/rubicon.js');
 var AppNexusAdapter = require('./adapters/appnexus.js');
 var AolAdapter = require('./adapters/aol');
 var OpenxAdapter = require('./adapters/openx');
+var CriteoAdapter = require('./adapters/criteo');
 var PubmaticAdapter = require('./adapters/pubmatic.js');
 var YieldbotAdapter = require('./adapters/yieldbot');
 var IndexExchange = require('./adapters/indexExchange');

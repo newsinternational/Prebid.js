@@ -1,6 +1,8 @@
 /**
  * @file Rubicon (Rubicon) adapter
  */
+
+// jshint ignore:start
 var utils = require('../utils');
 var bidmanager = require('../bidmanager');
 var bidfactory = require('../bidfactory');
@@ -15,13 +17,13 @@ var RubiconAdapter = function RubiconAdapter() {
     var RUBICON_OK_STATUS = 'ok';
     var RUBICON_BIDDER_CODE = 'rubicon';
     var RUBICON_SIZE_MAP = {
-        "728x90": 2,
-        "160x600": 9,
-        "300x600": 10,
-        "300x250": 15,
-        "320x50": 43,
-        "300x1050": 54,
-        "970x250": 57
+        '728x90': 2,
+        '160x600': 9,
+        '300x600': 10,
+        '300x250': 15,
+        '320x50': 43,
+        '300x1050': 54,
+        '970x250': 57
     };
     var RUBICON_INITIALIZED = 0;
 
@@ -44,6 +46,7 @@ var RubiconAdapter = function RubiconAdapter() {
      * @param {Object} response - the (error) response from fastlane
      * @return {Bid} a bid, for prebid
      */
+
     function _errorBid(response, ads) {
         var bidResponse = bidfactory.createBid(2);
         bidResponse.bidderCode = RUBICON_BIDDER_CODE;
@@ -59,6 +62,7 @@ var RubiconAdapter = function RubiconAdapter() {
      * @param {Object} adB
      * @return {Float} sort order value
      */
+
     function _adCpmSort(adA, adB) {
         return (adB.cpm || 0.0) - (adA.cpm || 0.0);
     }
@@ -69,6 +73,7 @@ var RubiconAdapter = function RubiconAdapter() {
      * @param {Array<Integer,Integer>} size array of width, height
      * @return {String} creative
      */
+
     function _creative(elemId, size) {
 
         // convert the size to a rubicon sizeId
@@ -91,14 +96,15 @@ var RubiconAdapter = function RubiconAdapter() {
      * @param {Object} response the response from rubicon
      * @return {Bid} a bid objectj
      */
+
     function _makeBid(response, ads) {
 
         // if there are multiple ads, sort by CPM
         ads = ads.sort(_adCpmSort);
 
-        var bidResponse = bidfactory.createBid(1),
-            ad = ads[0],
-            size = ad.dimensions;
+        var bidResponse = bidfactory.createBid(1);
+        var ad = ads[0];
+        var size = ad.dimensions;
 
         if (!size) {
             // this really shouldn't happen
@@ -108,6 +114,7 @@ var RubiconAdapter = function RubiconAdapter() {
 
         bidResponse.bidderCode = RUBICON_BIDDER_CODE;
         bidResponse.cpm = ad.cpm;
+
         // the element id is what the iframe will use to render
         // itself using the rubicontag.renderCreative API
         bidResponse.ad = _creative(response.getElementId(), size);
@@ -121,6 +128,7 @@ var RubiconAdapter = function RubiconAdapter() {
      * on the response from rubicon
      * @param {Object} response -- AJAX response from fastlane
      */
+
     function _addBid(response, ads) {
         // get the bid for the placement code
         var bid;
@@ -130,7 +138,7 @@ var RubiconAdapter = function RubiconAdapter() {
             bid = _makeBid(response, ads);
         }
 
-        bidmanager.addBidResponse(response.getSlotName(), bid);
+        bidmanager.addBidResponse(response.getElementId(), bid);
     }
 
     /**
@@ -138,6 +146,7 @@ var RubiconAdapter = function RubiconAdapter() {
      * ready/available
      * @param {Function} callback
      */
+
     function _rready(callback) {
         window.rubicontag.cmd.push(callback);
     }
@@ -148,11 +157,18 @@ var RubiconAdapter = function RubiconAdapter() {
      * @param {String} options.accountId
      * @param {Function} callback
      */
+
     function _initSDK(options, done) {
-        if (RUBICON_INITIALIZED) return;
+        if (RUBICON_INITIALIZED) {
+            return;
+        }
+
         RUBICON_INITIALIZED = 1;
+
         var accountId = options.accountId;
-        adloader.loadScript(RUBICONTAG_URL + accountId + '.js', done);
+        var scripttUrl = RUBICONTAG_URL + accountId + '.js';
+
+        adloader.loadScript(scripttUrl, done);
     }
 
     /**
@@ -160,21 +176,25 @@ var RubiconAdapter = function RubiconAdapter() {
      * @param  {object} array of bids
      * @return {[type]}      [description]
      */
-    function _mapSizes(bids){
-        utils._each(bids, function(bid){
-            if(bid.params.sizes){
+
+    function _mapSizes(bids) {
+        utils._each(bids, function(bid) {
+            if (bid.params.sizes) {
                 return;
             }
-             //return array like ['300x250', '728x90']
+
+            //return array like ['300x250', '728x90']
             var parsedSizes = utils.parseSizesInput(bid.sizes);
+
             //iterate the bid.sizes array to lookup codes
             var tempSize = [];
-            for(var i =0; i < parsedSizes.length; i++){
+            for (var i = 0; i < parsedSizes.length; i++) {
                 var rubiconKey = RUBICON_SIZE_MAP[parsedSizes[i]];
-                if(rubiconKey){
+                if (rubiconKey) {
                     tempSize.push(rubiconKey);
                 }
             }
+
             bid.params.sizes = tempSize;
         });
     }
@@ -182,57 +202,60 @@ var RubiconAdapter = function RubiconAdapter() {
     /**
      * Define the slot using the rubicontag.defineSlot API
      * @param {Object} Bidrequest
+     * @returns {RubiconSlot} Instance of RubiconSlot
      */
+
     function _defineSlot(bid) {
-        _rready(function () {
-            var newSlot=window.rubicontag.defineSlot({
-                siteId: bid.params.siteId,
-                zoneId: bid.params.zoneId,
-                id: bid.placementCode,
-                sizes: bid.params.sizes
-            });
-            if (bid.params.position) {
-                newSlot.setPosition(bid.params.position);
-            }
-            if (bid.params.userId) {
-                window.rubicontag.setUserKey(bid.params.userId);
-            }
-            if (bid.params.keywords) {
-                for(var i=0; i < bid.params.keywords.length; i++){
-                    newSlot.addKW(bid.params.keywords[i]);
-                }
-            }
-            if (bid.params.inventory) {
-                for (var p in bid.params.inventory) {
-                    if (bid.params.inventory.hasOwnProperty(p)) {
-                        newSlot.addFPI(p,bid.params.inventory[p]);
-                    }
-                }
-            }
-            if (bid.params.visitor) {
-                for (var p in bid.params.visitor) {
-                    if (bid.params.visitor.hasOwnProperty(p)) {
-                        newSlot.addFPV(p,bid.params.visitor[p]);
-                    }
-                }
-            }
+        var userId = bid.params.userId;
+        var position = bid.params.position;
+        var visitor = bid.params.visitor || [];
+        var keywords = bid.params.keywords || [];
+        var inventory = bid.params.inventory || [];
+        var slot = window.rubicontag.defineSlot({
+            siteId: bid.params.siteId,
+            zoneId: bid.params.zoneId,
+            sizes: bid.params.sizes,
+            id: bid.placementCode
         });
+
+        slot.clearTargeting();
+
+        if (userId) {
+            window.rubicontag.setUserKey(userId);
+        }
+
+        if (position) {
+            slot.setPosition(position);
+        }
+
+        for (var key in visitor) {
+            slot.addFPV(key, visitor[key]);
+        }
+
+        for (var key in inventory) {
+            slot.addFPI(key, inventory[key]);
+        }
+
+        slot.addKW(keywords);
+
+        return slot;
     }
 
     /**
      * Handle the bids received (from rubicon)
+     * @param {array} slots
      */
-    function _bidsReady() {
+
+    function _bidsReady(slots) {
         // NOTE: we don't really need to do anything,
         // because right now we're shimming XMLHttpRequest.open,
         // but in the future we'll get data from rubicontag here
         utils.logMessage('Rubicon Project bidding complete: ' + ((new Date).getTime() - _bidStart));
 
-        utils._each(rubicontag.getAllSlots(), function (slot) {
+        utils._each(slots, function(slot) {
             _addBid(slot, slot.getRawResponses());
         });
     }
-
 
     /**
      * Request the specified bids from
@@ -240,6 +263,7 @@ var RubiconAdapter = function RubiconAdapter() {
      * @param {Object} params the bidder-level params (from prebid)
      * @param {Array} params.bids the bids requested
      */
+
     function _callBids(params) {
 
         // start the timer; want to measure from
@@ -248,18 +272,31 @@ var RubiconAdapter = function RubiconAdapter() {
 
         _mapSizes(params.bids);
 
-        utils._each(params.bids, function (bid, index) {
-            // on the first bid, set up the SDK
-            // the config will be set on each bid
-            if (index === 0) {
-                _initSDK(bid.params);
+        if (utils.isEmpty(params.bids)) {
+            return;
+        }
+
+        // on the first bid, set up the SDK
+        if (!RUBICON_INITIALIZED) {
+            _initSDK(params.bids[0].params);
+        }
+
+        _rready(function() {
+            var slots = [];
+            var bids = params.bids;
+
+            for (var key in bids) {
+                slots.push(_defineSlot(bids[key]));
             }
 
-            _defineSlot(bid);
-        });
+            var parameters = {
+                slots: slots
+            };
+            var callback = function() {
+                _bidsReady(slots);
+            };
 
-        _rready(function () {
-            window.rubicontag.run(_bidsReady);
+            window.rubicontag.run(callback, parameters);
         });
     }
 
